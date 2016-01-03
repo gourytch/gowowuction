@@ -12,20 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"../config"
-)
-
-const (
-	region      = "eu"
-	realm       = "fordragon"
-	locale      = "ru_RU"
-	apikey      = "p7avwbwkz5t9s9m768az5qqnkany2ypd"
-	dir_fetched = "json"
-	dir_tmp     = "tmp"
-	dir_data    = "data"
-	name_active = "opened.data"
-	name_closed = "closed.data"
-	dir_perm    = 0777
+	config "github.com/gourytch/gowowuction/config"
 )
 
 type FDesc struct {

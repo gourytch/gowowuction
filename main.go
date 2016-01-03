@@ -3,11 +3,10 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
 
-	"./config"
-	"./fetcher"
-	"./util"
+	config "github.com/gourytch/gowowuction/config"
+	fetcher "github.com/gourytch/gowowuction/fetcher"
+	util "github.com/gourytch/gowowuction/util"
 )
 
 func main() {
@@ -18,7 +17,7 @@ func main() {
 	if len(os.Args) > 1 {
 		cfg_fname = os.Args[1]
 	} else {
-		cfg_fname = dir_base + string(filepath.Separator) + "config.json"
+		cfg_fname = util.ExeName() + ".config.json"
 	}
 	log.Println("config    : ", cfg_fname)
 	cf, err := config.Load(cfg_fname)

@@ -22,9 +22,18 @@ func Make_FName(realm string, ts time.Time) string {
 	return fmt.Sprintf("%s-%s-%s.json.gz", v[0], v[1], TSStr(ts.UTC()))
 }
 
+// получить полный путь до исполняемого файла
+func ExeName() string {
+	exe, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+	return exe
+}
+
 // получить каталог приложения
 func AppDir() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, err := filepath.Abs(filepath.Dir(ExeName()))
 	if err != nil {
 		log.Fatal(err)
 	}
