@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+
+	util "github.com/gourytch/gowowuction/util"
 )
 
 type Config struct {
@@ -19,7 +21,7 @@ type Config struct {
 	ClosedAuctionsMetadataFilename string   `json:"meta_name"`
 }
 
-func Default() *Config {
+func defaultConfig() *Config {
 	cf := new(Config)
 	cf.APIKey = ""
 	cf.RealmsList = []string{"eu:fordragon"}
@@ -64,8 +66,8 @@ func fixD(name string, defname string, basedir string) string {
 	return name
 }
 
-func Load(fname string) (*Config, error) {
-	dflt := Default()
+func load(fname string) (*Config, error) {
+	dflt := defaultConfig()
 	cf := new(Config)
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
@@ -80,14 +82,25 @@ func Load(fname string) (*Config, error) {
 		return nil, err
 	}
 	basedir = basedir + string(filepath.Separator)
-
 	cf.DownloadDirectory = fixD(cf.DownloadDirectory, dflt.DownloadDirectory, basedir)
 	cf.TempDirectory = fixD(cf.TempDirectory, dflt.TempDirectory, basedir)
 	cf.ResultDirectory = fixD(cf.ResultDirectory, dflt.ResultDirectory, basedir)
 	cf.OpenedAuctionsFilename = fixF(cf.OpenedAuctionsFilename, dflt.OpenedAuctionsFilename, basedir)
 	cf.ClosedAuctionsFilename = fixF(cf.ClosedAuctionsFilename, dflt.ClosedAuctionsFilename, basedir)
 	cf.ClosedAuctionsMetadataFilename = fixF(cf.ClosedAuctionsMetadataFilename, dflt.ClosedAuctionsMetadataFilename, basedir)
-
 	cf.Dump()
+	return cf, nil
+}
+
+func AppConfig() (*Config, error) {
+	dir_base := util.AppDir()
+	log.Println("app dir   : ", dir_base)
+	cfg_fname := util.ExeName() + ".config.json"
+	log.Println("config    : ", cfg_fname)
+	cf, err := load(cfg_fname)
+	if err != nil {
+		log.Fatalln("config load error: ", err)
+		return nil, err // unreachable
+	}
 	return cf, nil
 }
