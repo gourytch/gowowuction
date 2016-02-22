@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+	"regexp"
 
 	util "github.com/gourytch/gowowuction/util"
 )
@@ -95,7 +96,9 @@ func load(fname string) (*Config, error) {
 func AppConfig() (*Config, error) {
 	dir_base := util.AppDir()
 	log.Println("app dir   : ", dir_base)
-	cfg_fname := util.ExeName() + ".config.json"
+	r, _ := regexp.Compile("^(.*?)(?:\\.exe|\\.EXE|)$")
+	s := r.FindStringSubmatch(util.ExeName())
+	cfg_fname :=  s[1] + ".config.json"
 	log.Println("config    : ", cfg_fname)
 	cf, err := load(cfg_fname)
 	if err != nil {

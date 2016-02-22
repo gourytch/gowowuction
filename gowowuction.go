@@ -40,8 +40,8 @@ func DoFetch(cf *config.Config) {
 
 func DoParse(cf *config.Config) {
 	log.Println("=== PARSE BEGIN ===")
-	// fnames, err := filepath.Glob(cf.DownloadDirectory + "/*.json.gz")
-	fnames, err := filepath.Glob(cf.DownloadDirectory + "/*.json")
+	fnames, err := filepath.Glob(cf.DownloadDirectory + "/*.json.gz")
+	//fnames, err := filepath.Glob(cf.DownloadDirectory + "/*.json")
 	if err != nil {
 		log.Fatalln("glob failed:", err)
 	}
