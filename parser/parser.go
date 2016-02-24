@@ -153,8 +153,8 @@ func MakeBaseAuction(auc *Auction) (bse *BaseAuction) {
 	return
 }
 
-func MakeAuctionWithBonus(auc *Auction) (bns *AuctionWithMods) {
-	bns = new(AuctionWithMods)
+func MakeAuctionWithBonus(auc *Auction) (bns *AuctionWithBonus) {
+	bns = new(AuctionWithBonus)
 	bns.BaseAuction = auc.BaseAuction
 	bns.BonusPart = auc.BonusPart
 	return
