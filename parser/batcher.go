@@ -15,7 +15,7 @@ func (a ByBasename) Len() int           { return len(a) }
 func (a ByBasename) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByBasename) Less(i, j int) bool { return filepath.Base(a[i]) < filepath.Base(a[j]) }
 
-const TRIM_COUNT = 10000000
+const TRIM_COUNT = 0
 
 func ProcessSnapshot(ss *SnapshotData) {
 	log.Printf("snapshot for %d auctions in %d realms",
@@ -25,7 +25,7 @@ func ProcessSnapshot(ss *SnapshotData) {
 		log.Printf("  name=%s, slug=%s", realm.Name, realm.Slug)
 	}
 	count := len(ss.Auctions)
-	if TRIM_COUNT < count {
+	if TRIM_COUNT >0 && TRIM_COUNT < count {
 		count = TRIM_COUNT
 	}
 	log.Printf("  auctions: %d", count)
