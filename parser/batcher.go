@@ -5,7 +5,9 @@ import (
 	"log"
 	"path/filepath"
 	"sort"
+	"strings"
 
+	config "github.com/gourytch/gowowuction/config"
 	util "github.com/gourytch/gowowuction/util"
 )
 
@@ -25,7 +27,7 @@ func ProcessSnapshot(ss *SnapshotData) {
 		log.Printf("  name=%s, slug=%s", realm.Name, realm.Slug)
 	}
 	count := len(ss.Auctions)
-	if TRIM_COUNT >0 && TRIM_COUNT < count {
+	if TRIM_COUNT > 0 && TRIM_COUNT < count {
 		count = TRIM_COUNT
 	}
 	log.Printf("  auctions: %d", count)
@@ -40,7 +42,16 @@ func ProcessSnapshot(ss *SnapshotData) {
 	}
 }
 
-func BatchParse(fnames []string) {
+func ParseDir(cf *config.Config, realm string) {
+	mask := cf.DownloadDirectory +
+		strings.Replace(realm, ":", "-", -1) + "-*.json.gz"
+	log.Printf("scan by mask %s ...", mask)
+	fnames, err := filepath.Glob(mask)
+	if err != nil {
+		log.Fatalln("glob failed:", err)
+	}
+	log.Printf("... %d entries collected", len(fnames))
+
 	var goodfnames []string
 
 	for _, fname := range fnames {
@@ -54,13 +65,34 @@ func BatchParse(fnames []string) {
 		}
 	}
 	sort.Sort(ByBasename(goodfnames))
+	prc := new(AuctionProcessor)
+	prc.Init(cf, realm)
+	prc.LoadState()
 	for _, fname := range fnames {
-		log.Println(fname)
+		//log.Println(fname)
+		f_realm, f_time, ok := util.Parse_FName(fname)
+		if !ok {
+			log.Fatalf("not parsed correctly: %s", fname)
+			continue
+		}
+		if f_realm != realm {
+			log.Fatalf("not my realm (%s != %s)")
+			continue
+		}
+		if !prc.SnapshotNeeded(f_time) {
+			log.Printf("snapshot not needed: %s", util.TSStr(f_time))
+			continue
+		}
 		data, err := util.Load(fname)
 		if err != nil {
-			log.Fatalln("load error:", err)
+			log.Fatalf("load error: %s", err)
 		}
-		ProcessSnapshot(ParseSnapshot(data))
-		break
+		ss := ParseSnapshot(data)
+		prc.StartSnapshot(f_time)
+		for _, auc := range ss.Auctions {
+			prc.AddAuctionEntry(&auc)
+		}
+		prc.FinishSnapshot()
 	}
+	prc.SaveState()
 }

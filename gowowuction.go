@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"path/filepath"
 
 	config "github.com/gourytch/gowowuction/config"
 	fetcher "github.com/gourytch/gowowuction/fetcher"
@@ -40,12 +39,7 @@ func DoFetch(cf *config.Config) {
 
 func DoParse(cf *config.Config) {
 	log.Println("=== PARSE BEGIN ===")
-	fnames, err := filepath.Glob(cf.DownloadDirectory + "/*.json.gz")
-	//fnames, err := filepath.Glob(cf.DownloadDirectory + "/*.json")
-	if err != nil {
-		log.Fatalln("glob failed:", err)
-	}
-	parser.BatchParse(fnames)
+	parser.ParseDir(cf, cf.RealmsList[0])
 	log.Println("=== PARSE END ===")
 }
 
@@ -61,7 +55,7 @@ func main() {
 	util.CheckDir(cf.DownloadDirectory)
 	util.CheckDir(cf.ResultDirectory)
 
-	DoFetch(cf)
+	//DoFetch(cf)
 	DoParse(cf)
 
 	log.Println("done")
