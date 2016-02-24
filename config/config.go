@@ -10,16 +10,16 @@ import (
 	util "github.com/gourytch/gowowuction/util"
 )
 
+const SLASH = filepath.Separator
+
+
 type Config struct {
 	APIKey                         string   `json:"apikey"`
 	RealmsList                     []string `json:"realms"`
 	LocalesList                    []string `json:"locales"`
 	DownloadDirectory              string   `json:"download_dir"`
 	TempDirectory                  string   `json:"temp_dir"`
-	ResultDirectory                string   `json:"data_dir"`
-	OpenedAuctionsFilename         string   `json:"opened_name"`
-	ClosedAuctionsFilename         string   `json:"closed_name"`
-	ClosedAuctionsMetadataFilename string   `json:"meta_name"`
+	ResultDirectory                string   `json:"result_dir"`
 }
 
 func defaultConfig() *Config {
@@ -27,13 +27,10 @@ func defaultConfig() *Config {
 	cf.APIKey = ""
 	cf.RealmsList = []string{"eu:fordragon"}
 	cf.LocalesList = []string{"en_US", "ru_RU"}
-	cf.DownloadDirectory = "./data/download"
-	cf.TempDirectory = "./data/tmp"
-	cf.ResultDirectory = "./data/results"
-	cf.OpenedAuctionsFilename = "open.data"
-	cf.ClosedAuctionsFilename = "closed.data"
-	cf.ClosedAuctionsMetadataFilename = "closed-metadata.data"
-	return cf
+	cf.DownloadDirectory = "data/download"
+	cf.TempDirectory =  "data/tmp"
+	cf.ResultDirectory =  "data/result"
+return cf
 }
 
 func (cf *Config) Dump() {
@@ -43,9 +40,6 @@ func (cf *Config) Dump() {
 	log.Println("DownloadDirectory: ", cf.DownloadDirectory)
 	log.Println("TempDirectory: ", cf.TempDirectory)
 	log.Println("ResultDirectory: ", cf.ResultDirectory)
-	log.Println("OpenedAuctionsFilename: ", cf.OpenedAuctionsFilename)
-	log.Println("ClosedAuctionsFilename: ", cf.ClosedAuctionsFilename)
-	log.Println("ClosedAuctionsMetadataFilename: ", cf.ClosedAuctionsMetadataFilename)
 }
 
 func fixF(name string, defname string, basedir string) string {
@@ -61,8 +55,8 @@ func fixF(name string, defname string, basedir string) string {
 
 func fixD(name string, defname string, basedir string) string {
 	name = fixF(name, defname, basedir)
-	if name != "" && name[len(name)-1] != filepath.Separator {
-		name = name + string(filepath.Separator)
+	if name != "" && name[len(name)-1] != SLASH {
+		name = name + string(SLASH)
 	}
 	return name
 }
@@ -82,13 +76,10 @@ func load(fname string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	basedir = basedir + string(filepath.Separator)
+	basedir = basedir + string(SLASH)
 	cf.DownloadDirectory = fixD(cf.DownloadDirectory, dflt.DownloadDirectory, basedir)
 	cf.TempDirectory = fixD(cf.TempDirectory, dflt.TempDirectory, basedir)
 	cf.ResultDirectory = fixD(cf.ResultDirectory, dflt.ResultDirectory, basedir)
-	cf.OpenedAuctionsFilename = fixF(cf.OpenedAuctionsFilename, dflt.OpenedAuctionsFilename, basedir)
-	cf.ClosedAuctionsFilename = fixF(cf.ClosedAuctionsFilename, dflt.ClosedAuctionsFilename, basedir)
-	cf.ClosedAuctionsMetadataFilename = fixF(cf.ClosedAuctionsMetadataFilename, dflt.ClosedAuctionsMetadataFilename, basedir)
 	cf.Dump()
 	return cf, nil
 }
