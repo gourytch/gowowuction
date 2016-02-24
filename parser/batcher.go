@@ -42,7 +42,7 @@ func ProcessSnapshot(ss *SnapshotData) {
 	}
 }
 
-func ParseDir(cf *config.Config, realm string) {
+func ParseDir(cf *config.Config, realm string, safe bool) {
 	mask := cf.DownloadDirectory +
 		strings.Replace(realm, ":", "-", -1) + "-*.json.gz"
 	log.Printf("scan by mask %s ...", mask)
@@ -68,6 +68,8 @@ func ParseDir(cf *config.Config, realm string) {
 	prc := new(AuctionProcessor)
 	prc.Init(cf, realm)
 	prc.LoadState()
+	badfiles := make(map[string]string)
+
 	for _, fname := range fnames {
 		//log.Println(fname)
 		f_realm, f_time, ok := util.Parse_FName(fname)
@@ -85,14 +87,37 @@ func ParseDir(cf *config.Config, realm string) {
 		}
 		data, err := util.Load(fname)
 		if err != nil {
-			log.Fatalf("load error: %s", err)
+			//log.Fatalf("load error: %s", err)
+			log.Printf("%s LOAD ERROR: %s", fname, err)
+			badfiles[fname] = fmt.Sprint(err)
+			continue
 		}
-		ss := ParseSnapshot(data)
+		ss, err := ParseSnapshot(data)
+		if err != nil {
+			//log.Fatalf("load error: %s", err)
+			log.Printf("%s PARSE ERROR: %s", fname, err)
+			badfiles[fname] = fmt.Sprint(err)
+			continue
+		}
+
 		prc.StartSnapshot(f_time)
 		for _, auc := range ss.Auctions {
 			prc.AddAuctionEntry(&auc)
 		}
 		prc.FinishSnapshot()
+		if safe {
+			prc.SaveState()
+		}
 	}
-	prc.SaveState()
+	if !safe {
+		prc.SaveState()
+	}
+	if len(badfiles) == 0 {
+		log.Printf("all files loaded without errors")
+	} else {
+		log.Printf("%d files with errors", len(badfiles))
+		for fname, err := range badfiles {
+			log.Printf("%s: %s", fname, err)
+		}
+	}
 }

@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/json"
-	"log"
 )
 
 /*
@@ -23,12 +22,10 @@ func ParseAuction(data *RawAuctionData) (r *Auction) {
 }
 */
 
-func ParseSnapshot(data []byte) (snapshot *SnapshotData) {
+func ParseSnapshot(data []byte) (snapshot *SnapshotData, err error) {
 	snapshot = new(SnapshotData)
-	if err := json.Unmarshal(data, snapshot); err != nil {
-		log.Fatalf("... json failed: %s", err)
-	}
-	return
+	err = json.Unmarshal(data, snapshot)
+	return snapshot, err
 }
 
 func MakeBaseAuction(auc *Auction) (bse *BaseAuction) {

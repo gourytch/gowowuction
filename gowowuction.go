@@ -39,7 +39,9 @@ func DoFetch(cf *config.Config) {
 
 func DoParse(cf *config.Config) {
 	log.Println("=== PARSE BEGIN ===")
-	parser.ParseDir(cf, cf.RealmsList[0])
+	for _, realm := range cf.RealmsList {
+		parser.ParseDir(cf, realm, false)
+	}
 	log.Println("=== PARSE END ===")
 }
 
