@@ -14,13 +14,32 @@ import (
 	"time"
 )
 
+type ByBasename []string
+
+func (a ByBasename) Len() int           { return len(a) }
+func (a ByBasename) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByBasename) Less(i, j int) bool { return filepath.Base(a[i]) < filepath.Base(a[j]) }
+
+type ByContent []string
+
+func (a ByContent) Len() int           { return len(a) }
+func (a ByContent) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByContent) Less(i, j int) bool { return a[i] < a[j] }
+
 func TSStr(ts time.Time) string {
 	return ts.Format("20060102_150405")
 }
 
-func Make_FName(realm string, ts time.Time) string {
-	v := strings.Split(realm, ":")
-	return fmt.Sprintf("%s-%s-%s.json.gz", v[0], v[1], TSStr(ts.UTC()))
+func Safe_Realm(realm string) string {
+	return strings.Replace(realm, ":", "-", -1)
+}
+
+func Make_FName(realm string, ts time.Time, zipped bool) string {
+	n := fmt.Sprintf("%s-%s.json", Safe_Realm(realm), TSStr(ts.UTC()))
+	if zipped {
+		n = n + ".gz"
+	}
+	return n
 }
 
 func Parse_FName(fname string) (realm string, ts time.Time, good bool) {

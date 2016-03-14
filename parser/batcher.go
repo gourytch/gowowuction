@@ -11,12 +11,6 @@ import (
 	util "github.com/gourytch/gowowuction/util"
 )
 
-type ByBasename []string
-
-func (a ByBasename) Len() int           { return len(a) }
-func (a ByBasename) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByBasename) Less(i, j int) bool { return filepath.Base(a[i]) < filepath.Base(a[j]) }
-
 const TRIM_COUNT = 0
 
 func ProcessSnapshot(ss *SnapshotData) {
@@ -64,7 +58,7 @@ func ParseDir(cf *config.Config, realm string, safe bool) {
 			// log.Printf("skip fname %s", fname)
 		}
 	}
-	sort.Sort(ByBasename(goodfnames))
+	sort.Sort(util.ByBasename(goodfnames))
 	prc := new(AuctionProcessor)
 	prc.Init(cf, realm)
 	prc.LoadState()

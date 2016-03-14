@@ -42,9 +42,9 @@ type AuctionProcessorState struct {
 }
 
 type AuctionProcessor struct {
+	cf           *config.Config
 	StateFName   string
-	MetaFName    string
-	AucFName     string
+	Realm        string
 	State        AuctionProcessorState
 	SnapshotTime time.Time
 	Started      bool
@@ -162,12 +162,12 @@ func (prc *AuctionProcessor) closeEntry(id int64) {
 	data_auc, err := json.Marshal(e.Entry)
 	data_meta, err := json.Marshal(e.Meta)
 	if err != nil {
-		log.Fatalf("marshall error: %s", err)
+		log.Panicf("marshall error: %s", err)
 	}
 	_, err = prc.FileAuc.WriteString(string(data_auc) + "\n")
 	_, err = prc.FileMeta.WriteString(string(data_meta) + "\n")
 	if err != nil {
-		log.Fatalf("WriteString error: %s", err)
+		log.Panicf("WriteString error: %s", err)
 	}
 }
 
@@ -182,10 +182,9 @@ func (prc *AuctionProcessor) processAuction(auc *Auction) {
 }
 
 func (prc *AuctionProcessor) Init(cf *config.Config, realm string) {
-	pfx := cf.ResultDirectory + strings.Replace(realm, ":", "-", -1)
-	prc.StateFName = pfx + ".state.gz"
-	prc.MetaFName = pfx + ".metadata"
-	prc.AucFName = pfx + ".auctions"
+	prc.cf = cf
+	prc.Realm = realm
+	prc.StateFName = cf.ResultDirectory + cf.GetName("state", prc.Realm) + ".gz"
 	prc.State.WorkSet = make(WorkSetType)
 	prc.State.WorkList = nil
 	prc.SnapshotTime = time.Time{}
@@ -202,13 +201,13 @@ func (prc *AuctionProcessor) Init(cf *config.Config, realm string) {
 
 func (prc *AuctionProcessor) LoadState() {
 	if prc.Started {
-		log.Fatalln("LoadState inside snapshot session")
+		log.Panic("LoadState inside snapshot session")
 	}
 	if util.CheckFile(prc.StateFName) {
 		log.Printf("AuctionProcessor loading state from %s ...", prc.StateFName)
 		data, _ := util.Load(prc.StateFName)
 		if err := json.Unmarshal(data, &prc.State); err != nil {
-			log.Fatalf("... failed: %s", prc.StateFName, err)
+			log.Panicf("... failed: %s", prc.StateFName, err)
 		}
 		log.Printf("... loaded with %d list enties", len(prc.State.WorkList))
 		prc.State.WorkSet = make(WorkSetType)
@@ -222,7 +221,7 @@ func (prc *AuctionProcessor) LoadState() {
 
 func (prc *AuctionProcessor) SaveState() {
 	if prc.Started {
-		log.Fatalln("SaveState inside snapshot session")
+		log.Panic("SaveState inside snapshot session")
 	}
 	log.Printf("AuctionProcessor storing state to %s ...", prc.StateFName)
 	log.Printf("... prepare list with %d enties", len(prc.State.WorkSet))
@@ -251,7 +250,7 @@ func (prc *AuctionProcessor) SnapshotNeeded(snaptime time.Time) bool {
 
 func (prc *AuctionProcessor) StartSnapshot(snaptime time.Time) {
 	if prc.Started {
-		log.Fatalln("StartSnapshot inside snapshot session")
+		log.Panic("StartSnapshot inside snapshot session")
 	}
 	prc.Started = true
 	prc.SnapshotTime = snaptime
@@ -267,36 +266,38 @@ func (prc *AuctionProcessor) StartSnapshot(snaptime time.Time) {
 
 func (prc *AuctionProcessor) AddAuctionEntry(auc *Auction) {
 	if !prc.Started {
-		log.Fatalln("AddAuctionEntry outside snapshot session")
+		log.Panic("AddAuctionEntry outside snapshot session")
 	}
 	prc.processAuction(auc)
 }
 
+func OpenOrCreateFile(fname string) *os.File {
+	f, err := os.OpenFile(fname, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		f, err = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			log.Panicf("OpenFile(%s) error: %s", fname, err)
+		}
+	}
+	return f
+}
+
 func (prc *AuctionProcessor) FinishSnapshot() {
 	if !prc.Started {
-		log.Fatalln("FinishSnapshot outside snapshot session")
+		log.Panic("FinishSnapshot outside snapshot session")
 	}
 
 	// log.Println("check for closed auctions")
 	num_open, num_closed := 0, 0
-	var err error
-	prc.FileAuc, err = os.OpenFile(prc.AucFName, os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		prc.FileAuc, err = os.OpenFile(prc.AucFName, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			log.Fatalf("OpenFile(%s) error: %s", prc.AucFName, err)
-		}
-	}
+	auc_fname := prc.cf.ResultDirectory + prc.cf.GetTimedName("auctions", prc.Realm, prc.SnapshotTime)
+	meta_fname := prc.cf.ResultDirectory + prc.cf.GetTimedName("metadata", prc.Realm, prc.SnapshotTime)
+
+	prc.FileAuc = OpenOrCreateFile(auc_fname)
 	defer prc.FileAuc.Close()
 
-	prc.FileMeta, err = os.OpenFile(prc.MetaFName, os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		prc.FileMeta, err = os.OpenFile(prc.MetaFName, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			log.Fatalf("OpenFile(%s) error: %s", prc.MetaFName, err)
-		}
-	}
+	prc.FileMeta = OpenOrCreateFile(meta_fname)
 	defer prc.FileMeta.Close()
+
 	for id, _ := range prc.State.WorkSet {
 		_, seen := prc.SeenSet[id]
 		if !seen {

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	backup "github.com/gourytch/gowowuction/backup"
 	config "github.com/gourytch/gowowuction/config"
 	fetcher "github.com/gourytch/gowowuction/fetcher"
 	parser "github.com/gourytch/gowowuction/parser"
@@ -18,7 +19,7 @@ func DoFetch(cf *config.Config) {
 			file_url, file_ts := s.Fetch_FileURL(realm, locale)
 			log.Printf("FILE URL: %s", file_url)
 			log.Printf("FILE PIT: %s / %s", file_ts, util.TSStr(file_ts.UTC()))
-			fname := util.Make_FName(realm, file_ts)
+			fname := util.Make_FName(realm, file_ts, true)
 			json_fname := cf.DownloadDirectory + fname
 			if !util.CheckFile(json_fname) {
 				log.Printf("downloading from %s ...", file_url)
@@ -45,6 +46,17 @@ func DoParse(cf *config.Config) {
 	log.Println("=== PARSE END ===")
 }
 
+func DoBackup(cf *config.Config) {
+	log.Println("=== BACKUP BEGIN ===")
+	srcdir := cf.DownloadDirectory
+	dstdir := cf.TempDirectory + "/backup"
+	util.CheckDir(dstdir)
+	backup.Backup(srcdir, dstdir, "20060102", "")
+	//backup.Backup(srcdir, dstdir, "20060102", ".tar.gz")
+	backup.Backup(srcdir, dstdir, "20060102", ".zip")
+	log.Println("=== BACKUP END ===")
+}
+
 func main() {
 	log.Println("start")
 	cf, err := config.AppConfig()
@@ -59,6 +71,6 @@ func main() {
 
 	//DoFetch(cf)
 	DoParse(cf)
-
+	//DoBackup(cf)
 	log.Println("done")
 }
