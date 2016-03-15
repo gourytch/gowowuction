@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -61,6 +62,13 @@ type AuctionProcessor struct {
 	NumBids      int
 	NumMoves     int
 	NumAdjusts   int
+	NumBought    int
+	NumAuctioned int
+	NumExpired   int
+	
+	TotalOpened    int
+	TotalClosed    int
+	TotalSuccess   int
 }
 
 const (
@@ -169,11 +177,14 @@ func (prc *AuctionProcessor) closeEntry(id int64) {
 	case e.State.DeadLine.Before(prc.SnapshotTime):
 		m.Result = "bought"
 		m.Profit = e.Entry.Buyout
+		prc.NumBought++
 	case e.State.Raised:
 		m.Result = "auctioned"
 		m.Profit = e.State.LastBid
+		prc.NumAuctioned++
 	default:
 		m.Result = "expired"
+		prc.NumExpired++
 	}
 	data_auc, err := json.Marshal(e.Entry)
 	data_meta, err := json.Marshal(m)
@@ -276,6 +287,9 @@ func (prc *AuctionProcessor) StartSnapshot(snaptime time.Time) {
 	prc.NumBids = 0
 	prc.NumMoves = 0
 	prc.NumAdjusts = 0
+	prc.NumBought = 0
+	prc.NumAuctioned = 0
+	prc.NumExpired = 0
 	// log.Printf("start snapshot at %s with %d entries in workset",
 	//	util.TSStr(prc.SnapshotTime), len(prc.State.WorkSet))
 }
@@ -307,12 +321,16 @@ func (prc *AuctionProcessor) FinishSnapshot() {
 	num_open, num_closed := 0, 0
 	auc_fname := prc.cf.ResultDirectory + prc.cf.GetTimedName("auctions", prc.Realm, prc.SnapshotTime)
 	meta_fname := prc.cf.ResultDirectory + prc.cf.GetTimedName("metadata", prc.Realm, prc.SnapshotTime)
+	snap_fname := prc.cf.ResultDirectory + prc.cf.GetTimedName("snapshot", prc.Realm, prc.SnapshotTime)
 
 	prc.FileAuc = OpenOrCreateFile(auc_fname)
 	defer prc.FileAuc.Close()
 
 	prc.FileMeta = OpenOrCreateFile(meta_fname)
 	defer prc.FileMeta.Close()
+
+	SnapInfo := OpenOrCreateFile(snap_fname)
+	defer SnapInfo.Close()
 
 	for id, _ := range prc.State.WorkSet {
 		_, seen := prc.SeenSet[id]
@@ -323,14 +341,49 @@ func (prc *AuctionProcessor) FinishSnapshot() {
 			num_open++
 		}
 	}
+	
+	var rate int = 0
+	if num_closed > 0 {
+		rate = (prc.NumBought + prc.NumAuctioned) * 100 / num_closed
+	}
 
-	log.Printf("%s: %d entries: active %d, created %d, changed %d [bids:%d, adj:%d, moves:%d], closed %d",
+	prc.TotalOpened += num_open
+	prc.TotalClosed += num_closed
+	prc.TotalSuccess += prc.NumBought + prc.NumAuctioned
+	var total_rate int = 0
+	if prc.TotalClosed > 0 {
+		total_rate = prc.TotalSuccess * 100 / prc.TotalClosed
+	}
+	
+	log.Printf("%s: \n" + 
+	           "    entries: %d\n" +
+	           "    active: %d,\n" +
+			   "    created: %d,\n" +
+			   "    changed: %d [bids: %d, adj: %d, moves: %d]\n" +
+			   "    closed: %d [bought: %d, auctioned: %d, expired: %d, succes: %d%%]",
 		util.TSStr(prc.SnapshotTime),
 		len(prc.State.WorkSet), num_open,
 		prc.NumCreated, prc.NumModified,
 		prc.NumBids, prc.NumAdjusts, prc.NumMoves,
-		num_closed)
+		num_closed, prc.NumBought, prc.NumAuctioned, prc.NumExpired, rate)
+
+	log.Printf("total opened %d, closed %d, success %d%%",
+	           prc.TotalOpened, prc.TotalClosed, total_rate)
+	          
+		
+	SnapInfo.WriteString(
+		fmt.Sprintf("%s: entries:%d  active:%d created:%d " +
+			         " changed:%d [bids:%d adj:%d moves:%d]" +
+			         " closed:%d [bought:%d auctioned:%d expired:%d rate:%d%%]\n",
+					util.TSStr(prc.SnapshotTime),
+					len(prc.State.WorkSet), num_open,
+					prc.NumCreated, prc.NumModified,
+					prc.NumBids, prc.NumAdjusts, prc.NumMoves,
+					num_closed, prc.NumBought, prc.NumAuctioned, prc.NumExpired,
+					rate))
+		
 	prc.State.LastTime = prc.SnapshotTime
 	//log.Printf("last time sets to %s", util.TSStr(prc.State.LastTime))
+	
 	prc.Started = false
 }
