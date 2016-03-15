@@ -72,7 +72,7 @@ func ParseDir(cf *config.Config, realm string, safe bool) {
 			continue
 		}
 		if f_realm != realm {
-			log.Fatalf("not my realm (%s != %s)")
+			log.Fatalf("not my realm (%s != %s)", f_realm, realm)
 			continue
 		}
 		if !prc.SnapshotNeeded(f_time) {

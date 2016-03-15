@@ -12,22 +12,27 @@ import (
 	util "github.com/gourytch/gowowuction/util"
 )
 
-type AuctionMeta struct {
+type AuctionState struct {
 	Created  time.Time `json:"created"`
 	DeadLine time.Time `json:"deadline"`
-	LastSeen time.Time `json:"lastSeen"`
 	Updated  time.Time `json:"updated"`
 	Raised   bool      `json:"raised"`  // bid change detected
-	Bought   bool      `json:"bought"`  // buyout detected
-	Expired  bool      `json:"expired"` // auction definitely not bought
 	Moved    bool      `json:"moved"`   // player renamed / moved
 	FirstBid int64     `json:"firstBid"`
 	LastBid  int64     `json:"lastBid"`
 }
 
+type AuctionMeta struct {
+	Auc      int64     `json:"auc"`
+	Opened   time.Time `json:"opened"`
+	Closed   time.Time `json:"closed"`
+	Result   string    `json:"result"`
+	Profit   int64     `json:"profit"`
+}
+
 type WorkEntry struct {
 	Entry Auction     `json:"entry"`
-	Meta  AuctionMeta `json:"meta"`
+	State AuctionState `json:"state"`
 }
 
 type WorkSetType map[int64]WorkEntry
@@ -101,22 +106,21 @@ func (prc *AuctionProcessor) createEntry(auc *Auction) {
 	id := auc.Auc
 	var e WorkEntry
 	e.Entry = *auc
-	e.Meta.Created = prc.SnapshotTime
-	e.Meta.LastSeen = prc.SnapshotTime
+	e.State.Created = prc.SnapshotTime
 	dl_min, _ := guess_expiration(prc.SnapshotTime, e.Entry.TimeLeft)
 	var zeroTime time.Time
 	if prc.State.LastTime == zeroTime { // zero value
-		e.Meta.DeadLine = dl_min
+		e.State.DeadLine = dl_min
 	} else { // assigned
 		_, dl_max2 := guess_expiration(prc.State.LastTime, e.Entry.TimeLeft)
-		if dl_min.Before(dl_max2) {
-			e.Meta.DeadLine = dl_min
+		if dl_max2.Before(dl_min) {
+			e.State.DeadLine = dl_min
 		} else {
-			e.Meta.DeadLine = dl_max2
+			e.State.DeadLine = dl_max2
 		}
 	}
-	e.Meta.FirstBid = auc.Bid
-	e.Meta.LastBid = auc.Bid
+	e.State.FirstBid = auc.Bid
+	e.State.LastBid = auc.Bid
 	prc.State.WorkSet[id] = e
 	prc.SeenSet[id] = false
 	prc.NumCreated++
@@ -125,25 +129,24 @@ func (prc *AuctionProcessor) createEntry(auc *Auction) {
 func (prc *AuctionProcessor) applyEntry(auc *Auction) {
 	id := auc.Auc
 	e := prc.State.WorkSet[id]
-	e.Meta.LastSeen = prc.SnapshotTime
 	changed := false
-	if auc.Bid != e.Meta.LastBid {
-		e.Meta.LastBid = auc.Bid
+	if auc.Bid != e.State.LastBid {
+		e.State.LastBid = auc.Bid
 		e.Entry.Bid = auc.Bid
-		e.Meta.Raised = true
+		e.State.Raised = true
 		prc.NumBids++
 		changed = true
 	}
 	if auc.TimeLeft != e.Entry.TimeLeft {
 		e.Entry.TimeLeft = auc.TimeLeft
-		_, e.Meta.DeadLine = guess_expiration(prc.SnapshotTime, e.Entry.TimeLeft)
+		_, e.State.DeadLine = guess_expiration(prc.SnapshotTime, e.Entry.TimeLeft)
 		prc.NumAdjusts++
 		changed = true
 	}
 	if auc.Owner != e.Entry.Owner || auc.OwnerRealm != e.Entry.OwnerRealm {
 		e.Entry.Owner = auc.Owner
 		e.Entry.OwnerRealm = auc.OwnerRealm
-		e.Meta.Moved = true
+		e.State.Moved = true
 		prc.NumMoves++
 		changed = true
 	}
@@ -158,9 +161,22 @@ func (prc *AuctionProcessor) applyEntry(auc *Auction) {
 func (prc *AuctionProcessor) closeEntry(id int64) {
 	e := prc.State.WorkSet[id]
 	delete(prc.State.WorkSet, id)
-	e.Meta.Bought = prc.SnapshotTime.Before(e.Meta.DeadLine)
+	var m AuctionMeta
+	m.Auc = e.Entry.Auc
+	m.Opened = e.State.Created
+	m.Closed = prc.SnapshotTime
+	switch {
+	case e.State.DeadLine.Before(prc.SnapshotTime):
+		m.Result = "bought"
+		m.Profit = e.Entry.Buyout
+	case e.State.Raised:
+		m.Result = "auctioned"
+		m.Profit = e.State.LastBid
+	default:
+		m.Result = "expired"
+	}
 	data_auc, err := json.Marshal(e.Entry)
-	data_meta, err := json.Marshal(e.Meta)
+	data_meta, err := json.Marshal(m)
 	if err != nil {
 		log.Panicf("marshall error: %s", err)
 	}

@@ -45,17 +45,18 @@ func Make_FName(realm string, ts time.Time, zipped bool) string {
 func Parse_FName(fname string) (realm string, ts time.Time, good bool) {
 	good = false
 	// log.Printf("Parse_FName(%s)", fname)
-	rx := regexp.MustCompile("^(?:.*/|)([^-]+)-([^-]+)-(\\d{8}_\\d{6})\\.json\\.gz$")
-	v := rx.FindStringSubmatch(fname)
+	name := filepath.Base(fname)
+	rx := regexp.MustCompile("^([^-]+)-([^-]+)-(\\d{8}_\\d{6})\\.json\\.gz$")
+	v := rx.FindStringSubmatch(name)
 	if v == nil {
-		// log.Printf("... not matched")
+		//log.Panicf("... not matched")
 		return
 	}
 	// log.Printf("... matched, v=%v", v)
 	realm = v[1] + ":" + v[2]
 	ts, err := time.Parse("20060102_150405", v[3])
 	if err != nil {
-		// log.Printf("time not parsed: %s", v[3])
+		//log.Panicf("time not parsed: %s", v[3])
 		return
 	}
 	good = true
