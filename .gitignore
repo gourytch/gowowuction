@@ -3,3 +3,4 @@ data
 gowowuction
 gowowuction.exe
 gowowuction.config.json
+apps/auc-fetch/auc-fetch.config.json
