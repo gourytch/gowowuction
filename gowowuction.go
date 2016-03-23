@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	backup "github.com/gourytch/gowowuction/backup"
 	config "github.com/gourytch/gowowuction/config"
@@ -69,8 +70,21 @@ func main() {
 	util.CheckDir(cf.DownloadDirectory)
 	util.CheckDir(cf.ResultDirectory)
 
-	//DoFetch(cf)
-	DoParse(cf)
-	//DoBackup(cf)
+	if len(os.Args) == 0 {
+		DoFetch(cf)
+	} else {
+		for _, arg := range os.Args[1:] {
+			switch arg {
+			case "fetch":
+				DoFetch(cf)
+			case "parse":
+				DoParse(cf)
+			case "backup":
+				DoBackup(cf)
+			default:
+				log.Fatalf("unknown arg: \"%s\"", arg)
+			}
+		}
+	}
 	log.Println("done")
 }

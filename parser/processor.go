@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -17,22 +17,22 @@ type AuctionState struct {
 	Created  time.Time `json:"created"`
 	DeadLine time.Time `json:"deadline"`
 	Updated  time.Time `json:"updated"`
-	Raised   bool      `json:"raised"`  // bid change detected
-	Moved    bool      `json:"moved"`   // player renamed / moved
+	Raised   bool      `json:"raised"` // bid change detected
+	Moved    bool      `json:"moved"`  // player renamed / moved
 	FirstBid int64     `json:"firstBid"`
 	LastBid  int64     `json:"lastBid"`
 }
 
 type AuctionMeta struct {
-	Auc      int64     `json:"auc"`
-	Opened   time.Time `json:"opened"`
-	Closed   time.Time `json:"closed"`
-	Result   string    `json:"result"`
-	Profit   int64     `json:"profit"`
+	Auc    int64     `json:"auc"`
+	Opened time.Time `json:"opened"`
+	Closed time.Time `json:"closed"`
+	Result string    `json:"result"`
+	Profit int64     `json:"profit"`
 }
 
 type WorkEntry struct {
-	Entry Auction     `json:"entry"`
+	Entry Auction      `json:"entry"`
 	State AuctionState `json:"state"`
 }
 
@@ -65,10 +65,10 @@ type AuctionProcessor struct {
 	NumBought    int
 	NumAuctioned int
 	NumExpired   int
-	
-	TotalOpened    int
-	TotalClosed    int
-	TotalSuccess   int
+
+	TotalOpened  int
+	TotalClosed  int
+	TotalSuccess int
 }
 
 const (
@@ -341,49 +341,48 @@ func (prc *AuctionProcessor) FinishSnapshot() {
 			num_open++
 		}
 	}
-	
+
 	var rate int = 0
 	if num_closed > 0 {
 		rate = (prc.NumBought + prc.NumAuctioned) * 100 / num_closed
 	}
 
-	prc.TotalOpened += num_open
+	prc.TotalOpened += prc.NumCreated
 	prc.TotalClosed += num_closed
 	prc.TotalSuccess += prc.NumBought + prc.NumAuctioned
 	var total_rate int = 0
 	if prc.TotalClosed > 0 {
 		total_rate = prc.TotalSuccess * 100 / prc.TotalClosed
 	}
-	
-	log.Printf("%s: \n" + 
-	           "    entries: %d\n" +
-	           "    active: %d,\n" +
-			   "    created: %d,\n" +
-			   "    changed: %d [bids: %d, adj: %d, moves: %d]\n" +
-			   "    closed: %d [bought: %d, auctioned: %d, expired: %d, succes: %d%%]",
+
+	log.Printf("%s: \n"+
+		"    entries: %d\n"+
+		"    active: %d,\n"+
+		"    created: %d,\n"+
+		"    changed: %d [bids: %d, adj: %d, moves: %d]\n"+
+		"    closed: %d [bought: %d, auctioned: %d, expired: %d, succes: %d%%]",
 		util.TSStr(prc.SnapshotTime),
 		len(prc.State.WorkSet), num_open,
 		prc.NumCreated, prc.NumModified,
 		prc.NumBids, prc.NumAdjusts, prc.NumMoves,
 		num_closed, prc.NumBought, prc.NumAuctioned, prc.NumExpired, rate)
 
-	log.Printf("total opened %d, closed %d, success %d%%",
-	           prc.TotalOpened, prc.TotalClosed, total_rate)
-	          
-		
+	log.Printf("total created %d, closed %d, success %d%%",
+		prc.TotalOpened, prc.TotalClosed, total_rate)
+
 	SnapInfo.WriteString(
-		fmt.Sprintf("%s: entries:%d  active:%d created:%d " +
-			         " changed:%d [bids:%d adj:%d moves:%d]" +
-			         " closed:%d [bought:%d auctioned:%d expired:%d rate:%d%%]\n",
-					util.TSStr(prc.SnapshotTime),
-					len(prc.State.WorkSet), num_open,
-					prc.NumCreated, prc.NumModified,
-					prc.NumBids, prc.NumAdjusts, prc.NumMoves,
-					num_closed, prc.NumBought, prc.NumAuctioned, prc.NumExpired,
-					rate))
-		
+		fmt.Sprintf("%s: entries:%d  active:%d created:%d "+
+			"changed:%d [bids:%d adj:%d moves:%d] "+
+			"closed:%d [bought:%d auctioned:%d expired:%d rate:%d%%]\n",
+			util.TSStr(prc.SnapshotTime),
+			len(prc.State.WorkSet), num_open,
+			prc.NumCreated, prc.NumModified,
+			prc.NumBids, prc.NumAdjusts, prc.NumMoves,
+			num_closed, prc.NumBought, prc.NumAuctioned, prc.NumExpired,
+			rate))
+
 	prc.State.LastTime = prc.SnapshotTime
 	//log.Printf("last time sets to %s", util.TSStr(prc.State.LastTime))
-	
+
 	prc.Started = false
 }
