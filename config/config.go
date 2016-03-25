@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
-	"regexp"
+//	"regexp"
 	"strings"
 	"time"
 
@@ -112,11 +112,7 @@ func load(fname string) (*Config, error) {
 }
 
 func AppConfig() (*Config, error) {
-	dir_base := util.AppDir()
-	log.Println("app dir   : ", dir_base)
-	r, _ := regexp.Compile("^(.*?)(?:\\.exe|\\.EXE|)$")
-	s := r.FindStringSubmatch(util.ExeName())
-	cfg_fname := s[1] + ".config.json"
+	cfg_fname := util.AppBaseFileName() + ".config.json"
 	log.Println("config    : ", cfg_fname)
 	cf, err := load(cfg_fname)
 	if err != nil {

@@ -81,6 +81,16 @@ func AppDir() string {
 	return dir
 }
 
+func AppBaseFileName() string { 
+/* 
+name with full pathname but without extension
+c:\Apps\MyFile.exe -> c:\Apps\MyFile
+/tmp/zzzz -> /tmp/zzz
+*/
+	r, _ := regexp.Compile("^(.*?)(?:\\.exe|\\.EXE|)$")
+	return r.FindStringSubmatch(ExeName())[1]
+}
+
 // проверить или создать каталог
 func CheckDir(path string) {
 	log.Println("check for directory: ", path)
