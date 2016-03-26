@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -25,11 +26,11 @@ var pathname string = "/home/leech/leech/data/json"
 
 func initialize() {
 	privkey_fname := util.AppBaseFileName() + ".privkey"
-	privkey_data, err := util.Load(privkey_fname)
+	privkey_bytes, err := ioutil.ReadFile(privkey_fname)
 	if err != nil {
 		log.Panicf("privkey load error: %s", err)
 	}
-	signer, err := ssh.ParsePrivateKey(privkey_data)
+	signer, err := ssh.ParsePrivateKey(privkey_bytes)
 	if err != nil {
 		log.Panicf("privkey parse error: %s", err)
 	}
